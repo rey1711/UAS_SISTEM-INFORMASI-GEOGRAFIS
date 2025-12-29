@@ -1,0 +1,865 @@
+<!doctype html>
+<html lang="id">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="stylesheet" href="css/leaflet.css">
+    <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+    <link rel="stylesheet" href="css/qgis2web.css">
+    <link rel="stylesheet" href="css/fontawesome-all.min.css">
+    <link rel="stylesheet" href="css/leaflet.photon.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2980 0%, #26d0ce 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            height: 100vh;
+        }
+
+        .dashboard-container {
+            display: flex;
+            width: 100%;
+            max-width: 1600px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Sidebar - FIXED FOR SCROLL */
+        .sidebar {
+            width: 380px;
+            min-width: 380px;
+            background: linear-gradient(180deg, #2c3e50 0%, #1a2530 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 2;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .sidebar-content {
+            padding: 30px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(79, 195, 247, 0.5) transparent;
+        }
+
+        .sidebar-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .sidebar-content::-webkit-scrollbar-thumb {
+            background: rgba(79, 195, 247, 0.5);
+            border-radius: 3px;
+        }
+
+        .sidebar-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(79, 195, 247, 0.8);
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-section h1 {
+            color: white;
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .header-section h2 {
+            color: #4FC3F7;
+            font-size: 14px;
+            font-weight: 400;
+            font-style: italic;
+            opacity: 0.9;
+        }
+
+        .control-section {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .control-section h3 {
+            color: #4FC3F7;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .control-section h3 i {
+            font-size: 14px;
+        }
+
+        /* Layer Controls */
+        .layer-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border-left: 3px solid;
+            transition: all 0.2s ease;
+        }
+
+        .layer-control:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .layer-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .layer-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .layer-text h4 {
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .layer-text p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 11px;
+            font-weight: 400;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 22px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #455A64;
+            border-radius: 34px;
+            transition: .3s;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: .3s;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #4CAF50;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(22px);
+        }
+
+        /* Time Display Section */
+        .time-section {
+            margin-top: 20px;
+        }
+
+        .time-display {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .time-display h3 {
+            color: #4FC3F7;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .time-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .time-table tr {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .time-table tr:last-child {
+            border-bottom: none;
+        }
+
+        .time-table td {
+            padding: 10px 0;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 13px;
+        }
+
+        .time-table td:first-child {
+            font-weight: 500;
+            width: 60%;
+        }
+
+        .time-table td:last-child {
+            font-weight: 600;
+            text-align: right;
+            color: white;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Today Section */
+        .today-section {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .today-section h3 {
+            color: #4FC3F7;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .today-date {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 5px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .today-time {
+            font-size: 18px;
+            font-weight: 600;
+            color: #4FC3F7;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Color themes */
+        .layer-satellite { border-left-color: #4285F4; }
+        .layer-tambang { border-left-color: #22C5E2; }
+        .layer-hauling { border-left-color: #FDBF6F; }
+        .layer-jalur { border-left-color: #D8A96C; }
+
+        /* Map Container */
+        .map-container {
+            flex: 1;
+            position: relative;
+            background: #e0e0e0;
+            height: 100%;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Map Controls */
+        .map-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.2s ease;
+            color: #2c3e50;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: #4FC3F7;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .dashboard-container {
+                flex-direction: column;
+                height: 95vh;
+            }
+            
+            .sidebar {
+                width: 100%;
+                min-width: 100%;
+                height: 40%;
+            }
+            
+            .sidebar-content {
+                height: 100%;
+                overflow-y: auto;
+            }
+            
+            .map-container {
+                height: 60%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .dashboard-container {
+                height: 95vh;
+            }
+            
+            .sidebar {
+                height: 45%;
+            }
+            
+            .sidebar-content {
+                padding: 15px;
+            }
+            
+            .map-controls {
+                top: 10px;
+                right: 10px;
+            }
+        }
+    </style>
+    <title>DASHBOARD PEMETAAN TAMBANG KPC</title>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-content">
+                <div class="header-section">
+                    <h1>DASHBOARD PEMETAAN TAMBANG KPC</h1>
+                    <h2>Visualised Area Tambang & Jalan Hauling</h2>
+                </div>
+
+                <!-- Kontrol Layer -->
+                <div class="control-section">
+                    <h3><i class="fas fa-layer-group"></i> KONTROL LAYER</h3>
+                    <div class="layer-control layer-satellite">
+                        <div class="layer-info">
+                            <div class="layer-icon">
+                                <i class="fas fa-satellite"></i>
+                            </div>
+                            <div class="layer-text">
+                                <h4>Google Satellite</h4>
+                                <p>Layer cartels received image</p>
+                            </div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-satellite" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="layer-control layer-tambang">
+                        <div class="layer-info">
+                            <div class="layer-icon">
+                                <i class="fas fa-mountain"></i>
+                            </div>
+                            <div class="layer-text">
+                                <h4>Area Tambang</h4>
+                                <p>Area perambangam area</p>
+                            </div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-tambang" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="layer-control layer-hauling">
+                        <div class="layer-info">
+                            <div class="layer-icon">
+                                <i class="fas fa-road"></i>
+                            </div>
+                            <div class="layer-text">
+                                <h4>Jalan Hauling</h4>
+                                <p>Jalan angular tambang</p>
+                            </div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-hauling" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="layer-control layer-jalur">
+                        <div class="layer-info">
+                            <div class="layer-icon">
+                                <i class="fas fa-route"></i>
+                            </div>
+                            <div class="layer-text">
+                                <h4>Jalur Hauling</h4>
+                                <p>Rute paragonipulum</p>
+                            </div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-jalur" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Update Terakhir -->
+                <div class="time-section">
+                    <div class="time-display">
+                        <h3><i class="fas fa-clock"></i> UPDATE TERAKHIR</h3>
+                        <table class="time-table">
+                            <tr>
+                                <td>Hari Ini</td>
+                                <td id="hari-ini-time">22:29,1800</td>
+                            </tr>
+                            <tr>
+                                <td>Data Template</td>
+                                <td>2020/01/03</td>
+                            </tr>
+                            <tr>
+                                <td>Update Data</td>
+                                <td>18:40</td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Hari Ini -->
+                    <div class="today-section">
+                        <h3>HARI INI</h3>
+                        <div class="today-date" id="today-date">29/12/2025</div>
+                        <div class="today-time" id="today-time">22:29:18</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div class="map-container">
+            <div id="map"></div>
+
+            <!-- Map Controls -->
+            <div class="map-controls">
+                <button class="control-btn" id="btn-reset" title="Reset Zoom">
+                    <i class="fas fa-search"></i>
+                </button>
+                <button class="control-btn" id="btn-location" title="Lokasi Saya">
+                    <i class="fas fa-location-arrow"></i>
+                </button>
+                <button class="control-btn" id="btn-fullscreen" title="Fullscreen">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/qgis2web_expressions.js"></script>
+    <script src="js/leaflet.js"></script>
+    <script src="js/L.Control.Layers.Tree.min.js"></script>
+    <script src="js/leaflet.rotatedMarker.js"></script>
+    <script src="js/leaflet.pattern.js"></script>
+    <script src="js/leaflet-hash.js"></script>
+    <script src="js/Autolinker.min.js"></script>
+    <script src="js/rbush.min.js"></script>
+    <script src="js/labelgun.min.js"></script>
+    <script src="js/labels.js"></script>
+    <script src="js/leaflet.photon.js"></script>
+    <script src="data/AreaTambang_1.js"></script>
+    <script src="data/Jalan_Hauling_2.js"></script>
+    <script src="data/Jalur_Hauling_3.js"></script>
+
+    <script>
+        // Initialize map - TIDAK DIUBAH
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[0.5241565817048275,117.3011963181355],[0.729056085002424,117.70577430732774]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/tomchadwin/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        
+        // Fungsi popup original - TIDAK DIUBAH
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+
+        function addClassToPopupIfMedia(content, popup) {
+			var tempDiv = document.createElement('div');
+			tempDiv.innerHTML = content;
+			if (tempDiv.querySelector('td img')) {
+				popup._contentNode.classList.add('media');
+					setTimeout(function() {
+						popup.update();
+					}, 10);
+			} else {
+				popup._contentNode.classList.remove('media');
+			}
+		}
+        
+        // Layer definitions original - TIDAK DIUBAH WARNA
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        
+        map.createPane('pane_googlesatelite_0');
+        map.getPane('pane_googlesatelite_0').style.zIndex = 400;
+        var layer_googlesatelite_0 = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            pane: 'pane_googlesatelite_0',
+            opacity: 1.0,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 18
+        });
+        layer_googlesatelite_0;
+        map.addLayer(layer_googlesatelite_0);
+        
+        function pop_AreaTambang_1(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">full_id</th>\
+                        <td class="visible-with-data" id="full_id">' + (feature.properties['full_id'] !== null ? autolinker.link(String(feature.properties['full_id']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['osm_id'] !== null ? autolinker.link(String(feature.properties['osm_id']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['osm_type'] !== null ? autolinker.link(String(feature.properties['osm_type']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['landuse'] !== null ? autolinker.link(String(feature.properties['landuse']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name_en'] !== null ? autolinker.link(String(feature.properties['name_en']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['name'] !== null ? autolinker.link(String(feature.properties['name']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['industrial'] !== null ? autolinker.link(String(feature.properties['industrial']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2">' + (feature.properties['Luas_Ha'] !== null ? autolinker.link(String(feature.properties['Luas_Ha']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_AreaTambang_1_0() {
+            return {
+                pane: 'pane_AreaTambang_1',
+                opacity: 1,
+                color: 'rgba(34,197,226,0.5)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 3.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(166,206,227,0.5)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_AreaTambang_1');
+        map.getPane('pane_AreaTambang_1').style.zIndex = 401;
+        map.getPane('pane_AreaTambang_1').style['mix-blend-mode'] = 'normal';
+        var layer_AreaTambang_1 = new L.geoJson(json_AreaTambang_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_AreaTambang_1',
+            layerName: 'layer_AreaTambang_1',
+            pane: 'pane_AreaTambang_1',
+            onEachFeature: pop_AreaTambang_1,
+            style: style_AreaTambang_1_0,
+        });
+        bounds_group.addLayer(layer_AreaTambang_1);
+        map.addLayer(layer_AreaTambang_1);
+        
+        function pop_Jalan_Hauling_2(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">id</th>\
+                        <td class="visible-with-data" id="id">' + (feature.properties['id'] !== null ? autolinker.link(String(feature.properties['id']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Jalan_Hauling_2_0() {
+            return {
+                pane: 'pane_Jalan_Hauling_2',
+                opacity: 1,
+                color: 'rgba(253,191,111,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 2.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Jalan_Hauling_2');
+        map.getPane('pane_Jalan_Hauling_2').style.zIndex = 402;
+        map.getPane('pane_Jalan_Hauling_2').style['mix-blend-mode'] = 'normal';
+        var layer_Jalan_Hauling_2 = new L.geoJson(json_Jalan_Hauling_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Jalan_Hauling_2',
+            layerName: 'layer_Jalan_Hauling_2',
+            pane: 'pane_Jalan_Hauling_2',
+            onEachFeature: pop_Jalan_Hauling_2,
+            style: style_Jalan_Hauling_2_0,
+        });
+        bounds_group.addLayer(layer_Jalan_Hauling_2);
+        map.addLayer(layer_Jalan_Hauling_2);
+        
+        function pop_Jalur_Hauling_3(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <th scope="row">id</th>\
+                        <td class="visible-with-data" id="id">' + (feature.properties['id'] !== null ? autolinker.link(String(feature.properties['id']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Jalur_Hauling_3_0() {
+            return {
+                pane: 'pane_Jalur_Hauling_3',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(216,169,108,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Jalur_Hauling_3');
+        map.getPane('pane_Jalur_Hauling_3').style.zIndex = 403;
+        map.getPane('pane_Jalur_Hauling_3').style['mix-blend-mode'] = 'normal';
+        var layer_Jalur_Hauling_3 = new L.geoJson(json_Jalur_Hauling_3, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Jalur_Hauling_3',
+            layerName: 'layer_Jalur_Hauling_3',
+            pane: 'pane_Jalur_Hauling_3',
+            onEachFeature: pop_Jalur_Hauling_3,
+            style: style_Jalur_Hauling_3_0,
+        });
+        bounds_group.addLayer(layer_Jalur_Hauling_3);
+        map.addLayer(layer_Jalur_Hauling_3);
+        setBounds();
+
+        // Kontrol toggle untuk dashboard
+        document.getElementById('toggle-satellite').addEventListener('change', function(e) {
+            if (e.target.checked) {
+                map.addLayer(layer_googlesatelite_0);
+            } else {
+                map.removeLayer(layer_googlesatelite_0);
+            }
+        });
+
+        document.getElementById('toggle-tambang').addEventListener('change', function(e) {
+            if (e.target.checked) {
+                map.addLayer(layer_AreaTambang_1);
+            } else {
+                map.removeLayer(layer_AreaTambang_1);
+            }
+        });
+
+        document.getElementById('toggle-hauling').addEventListener('change', function(e) {
+            if (e.target.checked) {
+                map.addLayer(layer_Jalan_Hauling_2);
+            } else {
+                map.removeLayer(layer_Jalan_Hauling_2);
+            }
+        });
+
+        document.getElementById('toggle-jalur').addEventListener('change', function(e) {
+            if (e.target.checked) {
+                map.addLayer(layer_Jalur_Hauling_3);
+            } else {
+                map.removeLayer(layer_Jalur_Hauling_3);
+            }
+        });
+
+        // Map control buttons
+        document.getElementById('btn-reset').addEventListener('click', function() {
+            map.fitBounds([[0.5241565817048275,117.3011963181355],[0.729056085002424,117.70577430732774]]);
+        });
+
+        document.getElementById('btn-location').addEventListener('click', function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    map.setView([position.coords.latitude, position.coords.longitude], 15);
+                });
+            }
+        });
+
+        document.getElementById('btn-fullscreen').addEventListener('click', function() {
+            var elem = document.documentElement;
+            if (!document.fullscreenElement) {
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        });
+
+        // Time and date updates
+        function updateDateTime() {
+            var now = new Date();
+            
+            // Format: HH:MM,SSSS
+            var hours = now.getHours().toString().padStart(2, '0');
+            var minutes = now.getMinutes().toString().padStart(2, '0');
+            var seconds = now.getSeconds().toString().padStart(2, '0');
+            var milliseconds = Math.floor(now.getMilliseconds() / 10).toString().padStart(2, '0');
+            
+            document.getElementById('hari-ini-time').textContent = 
+                hours + ':' + minutes + ',' + seconds + milliseconds;
+            
+            // Format date: DD/MM/YYYY
+            var day = now.getDate().toString().padStart(2, '0');
+            var month = (now.getMonth() + 1).toString().padStart(2, '0');
+            var year = now.getFullYear();
+            
+            document.getElementById('today-date').textContent = 
+                day + '/' + month + '/' + year;
+            
+            // Format time: HH:MM:SS
+            document.getElementById('today-time').textContent = 
+                hours + ':' + minutes + ':' + seconds;
+        }
+
+        // Update time every 100ms untuk efek smooth
+        updateDateTime();
+        setInterval(updateDateTime, 100);
+    </script>
+</body>
+</html>
